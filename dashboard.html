@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Therapist Chat — Dashboard</title>
+    <style>
+      :root {
+        --sidebar: 280px;
+        --gap: 12px;
+        font-family: Inter, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        height: 100vh;
+        display: flex;
+        gap: var(--gap);
+        background: #f7f8fb;
+        color: #111;
+      }
+      #sidebar {
+        width: var(--sidebar);
+        background: #fff;
+        border-right: 1px solid #e6e9ef;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      #main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        padding: 16px;
+        gap: 12px;
+      }
+      .topbar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .topbar .who {
+        color: #666;
+        font-size: 14px;
+      }
+      button {
+        cursor: pointer;
+        border: 0;
+        background: #246bfd;
+        color: #fff;
+        padding: 8px 10px;
+        border-radius: 8px;
+      }
+      #newChatBtn {
+        background: #1f8cff;
+      }
+      #chatsList {
+        overflow: auto;
+        flex: 1;
+        padding-right: 6px;
+      }
+      .chat-item {
+        padding: 10px;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        background: transparent;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        border: 1px solid transparent;
+      }
+      .chat-item:hover {
+        background: #fbfdff;
+        border-color: #edf4ff;
+      }
+      .chat-item.active {
+        background: #eef6ff;
+        border-color: #d7ecff;
+      }
+      .chat-title {
+        font-weight: 600;
+      }
+      .chat-preview {
+        font-size: 13px;
+        color: #677089;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .chat-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: #93a0b4;
+      }
+      .rename-btn {
+        background: transparent;
+        color: #60719a;
+        border-radius: 6px;
+        padding: 4px 6px;
+        font-size: 13px;
+      }
+      #chatHeader {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      #chatWindow {
+        flex: 1;
+        background: #fff;
+        border: 1px solid #e6e9ef;
+        border-radius: 10px;
+        padding: 14px;
+        overflow: auto;
+      }
+      .msg {
+        max-width: 78%;
+        padding: 10px;
+        border-radius: 10px;
+        margin: 8px 0;
+        line-height: 1.4;
+      }
+      .msg.user {
+        margin-left: auto;
+        background: #dff0ff;
+      }
+      .msg.assistant {
+        margin-right: auto;
+        background: #f4f6fa;
+        color: #0f1724;
+      }
+      #composer {
+        display: flex;
+        gap: 8px;
+        align-items: flex-end;
+      }
+      #message {
+        flex: 1;
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid #dde6f2;
+        min-height: 56px;
+        resize: vertical;
+      }
+      .small {
+        font-size: 13px;
+        color: #6b7280;
+      }
+      .muted {
+        color: #9aa6c4;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="sidebar">
+      <div class="topbar">
+        <div>
+          <div style="font-weight: 700">Therapist Chat</div>
+          <div class="who">Signed in as <strong>{{ email }}</strong></div>
+        </div>
+        <div style="margin-left: auto; display: flex; gap: 8px">
+          <button id="newChatBtn">New Chat</button>
+          <a href="/logout" style="text-decoration: none"
+            ><button style="background: #ef4444">Logout</button></a
+          >
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 8px; align-items: center">
+        <input
+          id="searchChats"
+          placeholder="Search chats..."
+          style="
+            flex: 1;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid #e6edf8;
+          "
+        />
+        <button id="refreshBtn" title="Refresh">⟳</button>
+      </div>
+
+      <div id="chatsList" aria-live="polite"></div>
+    </div>
+
+    <div id="main">
+      <div id="chatHeader">
+        <div>
+          <h2 id="chatTitle" style="margin: 0">Select or start a chat</h2>
+          <div class="small muted" id="chatMeta">
+            Your conversations appear here
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center">
+          <button id="renameBtn" style="display: none; background: #6b7280">
+            Rename
+          </button>
+          <button id="clearBtn" style="background: #f59e0b; display: none">
+            New (start fresh)
+          </button>
+        </div>
+      </div>
+
+      <div id="chatWindow" aria-live="polite"></div>
+
+      <div id="composer">
+        <textarea
+          id="message"
+          placeholder="Describe one habit or a typical day in exact detail"
+          rows="2"
+        ></textarea>
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <button id="sendBtn">Send</button>
+          <div class="small muted" id="statusText"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let currentChatId = null;
+      let currentTitle = "";
+      const chatsListEl = document.getElementById("chatsList");
+      const chatWindow = document.getElementById("chatWindow");
+      const messageEl = document.getElementById("message");
+      const sendBtn = document.getElementById("sendBtn");
+      const newChatBtn = document.getElementById("newChatBtn");
+      const refreshBtn = document.getElementById("refreshBtn");
+      const renameBtn = document.getElementById("renameBtn");
+      const clearBtn = document.getElementById("clearBtn");
+      const chatTitleEl = document.getElementById("chatTitle");
+      const chatMetaEl = document.getElementById("chatMeta");
+      const statusText = document.getElementById("statusText");
+      const searchEl = document.getElementById("searchChats");
+
+      function el(tag, cls, txt) {
+        const d = document.createElement(tag);
+        if (cls) d.className = cls;
+        if (txt !== undefined) d.textContent = txt;
+        return d;
+      }
+
+      async function loadChats(q) {
+        chatsListEl.innerHTML = "Loading...";
+        try {
+          const res = await fetch("/chats");
+          const j = await res.json();
+          const items = j.chats || [];
+          chatsListEl.innerHTML = "";
+          const qlow = (q || "").toLowerCase();
+          items.forEach((c) => {
+            if (
+              qlow &&
+              !(
+                (c.title || "").toLowerCase().includes(qlow) ||
+                (c.last_message || "").toLowerCase().includes(qlow)
+              )
+            )
+              return;
+            const node = el("div", "chat-item");
+            node.dataset.id = c.chat_id;
+            const title = el("div", "chat-title", c.title || "New Chat");
+            const preview = el("div", "chat-preview", c.last_message || "");
+            const meta = el("div", "chat-meta", "");
+            meta.innerHTML = `<span>${c.message_count || 0} msgs</span><span>${
+              c.updated_at ? new Date(c.updated_at).toLocaleString() : ""
+            }</span>`;
+            const controls = document.createElement("div");
+            controls.style.display = "flex";
+            controls.style.gap = "6px";
+            controls.style.marginTop = "6px";
+            const rename = document.createElement("button");
+            rename.className = "rename-btn";
+            rename.textContent = "✏️ Rename";
+            rename.onclick = async (ev) => {
+              ev.stopPropagation();
+              await renameChat(c.chat_id, c.title);
+            };
+            controls.appendChild(rename);
+            node.appendChild(title);
+            node.appendChild(preview);
+            node.appendChild(meta);
+            node.appendChild(controls);
+            node.onclick = () => selectChat(c.chat_id, c.title);
+            if (currentChatId && currentChatId === c.chat_id)
+              node.classList.add("active");
+            chatsListEl.appendChild(node);
+          });
+          if (!items.length)
+            chatsListEl.innerHTML =
+              "<div class='small muted'>No chats yet. Click New Chat to start.</div>";
+        } catch (e) {
+          chatsListEl.innerHTML =
+            "<div class='small muted'>Failed to load chats</div>";
+          console.error(e);
+        }
+      }
+
+      async function selectChat(id, title) {
+        currentChatId = id;
+        currentTitle = title || "Chat";
+        chatTitleEl.textContent = currentTitle;
+        renameBtn.style.display = "inline-block";
+        clearBtn.style.display = "inline-block";
+        statusText.textContent = "";
+        await loadChatMessages(id);
+        highlightActive();
+      }
+
+      function highlightActive() {
+        document.querySelectorAll(".chat-item").forEach((it) => {
+          it.classList.toggle("active", it.dataset.id === currentChatId);
+        });
+      }
+
+      async function loadChatMessages(id) {
+        chatWindow.innerHTML = "Loading messages...";
+        try {
+          const res = await fetch(`/chats/${id}`);
+          if (!res.ok) {
+            chatWindow.innerHTML =
+              "<div class='small muted'>Failed to load chat</div>";
+            return;
+          }
+          const j = await res.json();
+          renderMessages(j.messages || []);
+          chatMetaEl.textContent = `Messages: ${
+            (j.messages || []).length
+          } • Updated`;
+        } catch (e) {
+          chatWindow.innerHTML =
+            "<div class='small muted'>Error loading messages</div>";
+          console.error(e);
+        }
+      }
+
+      function renderMessages(messages) {
+        chatWindow.innerHTML = "";
+        messages.forEach((m) => {
+          const d = el(
+            "div",
+            "msg " + (m.role === "user" ? "user" : "assistant")
+          );
+          d.textContent = m.content;
+          chatWindow.appendChild(d);
+        });
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+      }
+
+      async function createNewChat(title) {
+        const res = await fetch("/chats/new", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: title || "New Chat" }),
+        });
+        if (!res.ok) {
+          alert("Failed to create chat");
+          return;
+        }
+        const j = await res.json();
+        await loadChats();
+        selectChat(j.chat_id, j.title);
+      }
+
+      newChatBtn.addEventListener("click", () => createNewChat("New Chat"));
+      refreshBtn.addEventListener("click", () => loadChats());
+      searchEl.addEventListener("input", (e) => loadChats(e.target.value));
+
+      renameBtn.addEventListener("click", async () => {
+        if (!currentChatId) return alert("Open a chat first");
+        const t = prompt("Rename chat", currentTitle || "");
+        if (!t) return;
+        try {
+          const res = await fetch(`/chats/${currentChatId}/rename`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title: t }),
+          });
+          if (!res.ok) throw new Error("failed");
+          currentTitle = t;
+          chatTitleEl.textContent = currentTitle;
+          await loadChats();
+        } catch (e) {
+          alert("Rename failed");
+          console.error(e);
+        }
+      });
+
+      clearBtn.addEventListener("click", async () => {
+        await createNewChat("New Chat");
+      });
+
+      sendBtn.addEventListener("click", sendMessage);
+      messageEl.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+
+      async function sendMessage() {
+        const text = messageEl.value.trim();
+        if (!text) return;
+        if (!currentChatId) {
+          // create a new chat automatically if none selected
+          await createNewChat(text.slice(0, 60));
+        }
+        appendLocal("user", text);
+        messageEl.value = "";
+        sendBtn.disabled = true;
+        statusText.textContent = "Sending...";
+        try {
+          const res = await fetch("/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: text, chat_id: currentChatId }),
+          });
+          const j = await res.json();
+          if (j.reply) {
+            appendLocal("assistant", j.reply);
+            if (j.chat_id && (!currentChatId || currentChatId !== j.chat_id)) {
+              currentChatId = j.chat_id;
+            }
+            await loadChats();
+            highlightActive();
+          } else {
+            appendLocal("assistant", "No reply from model");
+          }
+        } catch (e) {
+          appendLocal("assistant", "Network or server error");
+          console.error(e);
+        } finally {
+          sendBtn.disabled = false;
+          statusText.textContent = "";
+        }
+      }
+
+      function appendLocal(role, text) {
+        const d = el("div", "msg " + (role === "user" ? "user" : "assistant"));
+        d.textContent = text;
+        chatWindow.appendChild(d);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+      }
+
+      async function renameChat(chatId, current) {
+        const newTitle = prompt("Rename chat", current || "");
+        if (!newTitle) return;
+        try {
+          const res = await fetch(`/chats/${chatId}/rename`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title: newTitle }),
+          });
+          if (!res.ok) throw new Error("rename failed");
+          await loadChats();
+          if (currentChatId === chatId) {
+            chatTitleEl.textContent = newTitle;
+            currentTitle = newTitle;
+          }
+        } catch (e) {
+          alert("Rename failed");
+          console.error(e);
+        }
+      }
+
+      window.addEventListener("load", () => {
+        loadChats();
+      });
+    </script>
+  </body>
+</html>
